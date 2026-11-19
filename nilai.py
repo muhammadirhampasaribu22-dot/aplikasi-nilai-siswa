@@ -1,31 +1,40 @@
 import streamlit as st
 import pandas as pd
 
-# ====== Pengaturan nilai ======
-BOBOT_HARIAN = 0.30
-BOBOT_ULANGAN = 0.30
-BOBOT_UAS = 0.40
-KKM = 70
-
 st.set_page_config(page_title="Aplikasi Penghitung Nilai Siswa", page_icon="🎓", layout="centered")
 
 if "data_siswa" not in st.session_state:
     st.session_state.data_siswa = []
 
-def tentukan_grade(nilai):
-    """Logika grade: mengembalikan (grade, warna, pesan)."""
+# ====== Pengaturan KKM & Bobot (Bisa diubah langsung di web) ======
+with st.expander("⚙️ Pengaturan Nilai KKM & Bobot (Klik untuk mengubah)", expanded=False):
+    col_set1, col_set2 = st.columns(2)
+    with col_set1:
+        KKM = st.number_input("Standar Nilai KKM", min_value=0.0, max_value=100.0, value=75.0, step=1.0)
+    with col_set2:
+        st.caption("Pastikan total bobot = 100%")
+        b_harian = st.number_input("Bobot Harian (%)", 0, 100, 30, step=5)
+        b_ulangan = st.number_input("Bobot Ulangan (%)", 0, 100, 30, step=5)
+        b_uas = st.number_input("Bobot UAS (%)", 0, 100, 40, step=5)
+
+BOBOT_HARIAN = b_harian / 100.0
+BOBOT_ULANGAN = b_ulangan / 100.0
+BOBOT_UAS = b_uas / 100.0
+
+def tentukan_grade(nilai, kkm_aktif):
+    """Logika grade menyesuaikan nilai KKM."""
     if nilai >= 85:
         return "A", "#2ecc71", "Luar biasa! Pertahankan prestasimu 🌟"
     elif nilai >= 75:
         return "B", "#3498db", "Bagus! Sedikit lagi menuju A 👍"
-    elif nilai >= 65:
-        return "C", "#f1c40f", "Cukup baik, ayo tingkatkan lagi 💪"
+    elif nilai >= kkm_aktif:
+        return "C", "#f1c40f", "Tuntas KKM, ayo tingkatkan lagi 💪"
     elif nilai >= 50:
-        return "D", "#e67e22", "Perlu belajar lebih giat 📚"
+        return "D", "#e67e22", "Belum tuntas KKM, perlu belajar lebih giat 📚"
     else:
-        return "E", "#e74c3c", "Jangan menyerah, ayo remedial! 🔥"
+        return "E", "#e74c3c", "Belum tuntas KKM, ayo remedial! 🔥"
 
-def susun_data():
+def susun_data(kkm_aktif):
     """Mengurutkan data dan menghitung peringkat otomatis."""
     data_urut = sorted(st.session_state.data_siswa, key=lambda x: x["Akhir"], reverse=True)
     medali = {1: "🥇 1", 2: "🥈 2", 3: "🥉 3"}
@@ -39,6 +48,7 @@ def susun_data():
             nilai_sebelumnya = item["Akhir"]
         baris = item.copy()
         baris["Peringkat"] = medali.get(peringkat, str(peringkat))
+        baris["Status"] = "✔ LULUS" if baris["Akhir"] >= kkm_aktif else "✘ TIDAK LULUS"
         hasil.append(baris)
     return hasil
 
@@ -47,11 +57,14 @@ st.markdown(f"""
 <div style="background-color:#1f2a44; padding:20px; border-radius:10px; text-align:center; margin-bottom:20px;">
     <h1 style="color:white; margin:0; font-size:28px;">🎓 HITUNG NILAI SISWA</h1>
     <p style="color:#bdc3c7; margin:5px 0 0 0; font-size:14px;">
-        Harian {int(BOBOT_HARIAN*100)}% &nbsp;•&nbsp; Ulangan {int(BOBOT_ULANGAN*100)}% &nbsp;•&nbsp; 
-        UAS {int(BOBOT_UAS*100)}% &nbsp;•&nbsp; KKM {KKM}
+        Harian {b_harian}% &nbsp;•&nbsp; Ulangan {b_ulangan}% &nbsp;•&nbsp; 
+        UAS {b_uas}% &nbsp;•&nbsp; KKM {int(KKM)}
     </p>
 </div>
 """, unsafe_allow_html=True)
+
+if b_harian + b_ulangan + b_uas != 100:
+    st.warning(f"⚠️ Total bobot saat ini **{b_harian + b_ulangan + b_uas}%**. Pastikan jumlahnya pas **100%**.")
 
 # ====== Form Input & Pratinjau Langsung ======
 with st.container(border=True):
@@ -65,7 +78,7 @@ with st.container(border=True):
         uas = st.number_input("🏆 Nilai UAS", min_value=0.0, max_value=100.0, value=0.0, step=1.0)
 
     akhir_preview = harian * BOBOT_HARIAN + ulangan * BOBOT_ULANGAN + uas * BOBOT_UAS
-    grade_p, warna_p, pesan_p = tentukan_grade(akhir_preview)
+    grade_p, warna_p, pesan_p = tentukan_grade(akhir_preview, KKM)
     status_p = "LULUS ✔" if akhir_preview >= KKM else "TIDAK LULUS ✘"
 
     st.markdown("---")
@@ -74,7 +87,7 @@ with st.container(border=True):
         st.markdown(f"<h1 style='color:{warna_p}; margin:0;'>{akhir_preview:.1f}</h1>", unsafe_allow_html=True)
     with p_col2:
         st.markdown(f"**{nama.strip() if nama.strip() else 'Pratinjau Nilai'}**")
-        st.caption(f"{status_p}  •  {pesan_p}")
+        st.caption(f"{status_p} (KKM {int(KKM)})  •  {pesan_p}")
     with p_col3:
         st.markdown(f"""
         <div style='background-color:{warna_p}; color:white; font-size:24px; font-weight:bold; 
@@ -105,7 +118,7 @@ with st.container(border=True):
             st.rerun()
 
 # ====== Statistik, Podium & Tabel ======
-data_terurut = susun_data()
+data_terurut = susun_data(KKM)
 
 if data_terurut:
     daftar_akhir = [d["Akhir"] for d in data_terurut]
@@ -147,7 +160,7 @@ if data_terurut:
 
     st.dataframe(df.style.apply(warna_baris, axis=1), use_container_width=True, hide_index=True)
 
-    b_col1, b_col2 = st.columns([3, 1])
+    b_col1, b_col2 = st.columns(2)
     with b_col1:
         daftar_nama = [f"{i+1}. {d['Nama']} ({d['Akhir']})" for i, d in enumerate(data_terurut)]
         pilih_hapus = st.selectbox("Pilih siswa untuk dihapus:", daftar_nama, label_visibility="collapsed")
