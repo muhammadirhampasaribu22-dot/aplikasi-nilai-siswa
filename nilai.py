@@ -2,6 +2,27 @@ import streamlit as st
 import pandas as pd
 
 st.set_page_config(page_title="Aplikasi Penghitung Nilai Siswa", page_icon="🎓", layout="centered")
+# ================= MULAI KODE LOGIN GOOGLE =================
+EMAIL_GURU = [
+    "muhammadirhampasaribu22@gmail.com", 
+]
+
+if not st.user.is_logged_in:
+    st.title("🔒 Login Aplikasi Nilai Siswa")
+    st.info("Silakan masuk menggunakan akun Google yang terdaftar.")
+    st.button("Login dengan Google", on_click=st.login, type="primary")
+    st.stop()
+
+if st.user.email not in EMAIL_GURU:
+    st.error(f"Akses ditolak. Email **{st.user.email}** tidak memiliki izin.")
+    st.button("Keluar / Ganti Akun", on_click=st.logout)
+    st.stop()
+
+with st.sidebar:
+    st.write(f"Halo, **{st.user.name}**!")
+    st.button("Logout", on_click=st.logout)
+# ================= AKHIR KODE LOGIN GOOGLE =================
+
 
 if "data_siswa" not in st.session_state:
     st.session_state.data_siswa = []
