@@ -2,26 +2,32 @@ import streamlit as st
 import pandas as pd
 
 st.set_page_config(page_title="Aplikasi Penghitung Nilai Siswa", page_icon="🎓", layout="centered")
-# ================= MULAI KODE LOGIN GOOGLE =================
-EMAIL_GURU = [
-    "muhammadirhampasaribu22@gmail.com", 
-]
-
-if not st.user.is_logged_in:
+# ================= MULAI KODE LOGIN =================
+if not st.session_state.get("sudah_login", False):
     st.title("🔒 Login Aplikasi Nilai Siswa")
-    st.info("Silakan masuk menggunakan akun Google yang terdaftar.")
-    st.button("Login dengan Google", on_click=st.login, type="primary")
-    st.stop()
+    with st.form("form_login"):
+        username = st.text_input("Username")
+        password = st.text_input("Password", type="password")
+        masuk = st.form_submit_button("Masuk", type="primary")
 
-if st.user.email not in EMAIL_GURU:
-    st.error(f"Akses ditolak. Email **{st.user.email}** tidak memiliki izin.")
-    st.button("Keluar / Ganti Akun", on_click=st.logout)
+        if masuk:
+            if (
+                username in st.secrets["passwords"]
+                and password == st.secrets["passwords"][username]
+            ):
+                st.session_state["sudah_login"] = True
+                st.session_state["user_aktif"] = username
+                st.rerun()
+            else:
+                st.error("❌ Username atau password salah.")
     st.stop()
 
 with st.sidebar:
-    st.write(f"Halo, **{st.user.name}**!")
-    st.button("Logout", on_click=st.logout)
-# ================= AKHIR KODE LOGIN GOOGLE =================
+    st.write(f"Halo, **{st.session_state['user_aktif']}**!")
+    if st.button("Logout"):
+        st.session_state["sudah_login"] = False
+        st.rerun()
+# ================= AKHIR KODE LOGIN =================
 
 
 if "data_siswa" not in st.session_state:
