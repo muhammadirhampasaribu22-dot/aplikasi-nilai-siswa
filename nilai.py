@@ -10,7 +10,7 @@ EMAIL_GURU = [
 if not st.user.is_logged_in:
     st.title("🔒 Login Aplikasi Nilai Siswa")
     st.info("Silakan masuk menggunakan akun Google yang terdaftar.")
-    st.button("Login dengan Google", on_click=lambda:st.login("google"), type="primary")
+    st.button("Login dengan Google", on_click=:st.login, type="primary")
     st.stop()
 
 if st.user.email not in EMAIL_GURU:
